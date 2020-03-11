@@ -11,9 +11,14 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import datetime
+import sys
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_DIR)
+sys.path.insert(0, os.path.join(BASE_DIR, 'apis'))
+sys.path.insert(0, os.path.join(BASE_DIR, 'extra_apps'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -36,17 +41,31 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'apis.users',
+    'apis.utils',
+    'rest_captcha',
+    'rest_framework',
+    'rest_framework_jwt',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware', #注意顺序，必须放在这儿
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware', #最后一个也必须放在这儿
 ]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_ALLOW_ALL = True
+# 允许所有的请求头
+CORS_ALLOW_HEADERS = ('*', )
+# 允许所有方法
+CORS_ALLOW_METHODS = ('*', )
 
 ROOT_URLCONF = 'counter_back.urls'
 
@@ -75,8 +94,13 @@ WSGI_APPLICATION = 'counter_back.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'chat',
+        'USER': 'root',
+        'PASSWORD': '123456',
+        'HOST': 'localhost',
+        'PORT': 3306,
+        'OPTIONS': {'charset': 'utf8mb4'},
     }
 }
 
@@ -103,18 +127,54 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'zh-hans'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ),
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning', # 默认版本类
+    'DEFAULT_VERSION': 'v1',  # 默认版本
+    'ALLOWED_VERSIONS': ['v1', 'v2'],  # 允许的版本
+    'VERSION_PARAM': 'version',  # URL中获取值的key
+}
+
+JWT_AUTH = {
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(days=1),  # 生成的token有效期
+    'JWT_RESPONSE_PAYLOAD_HANDLER': 'apis.users.utils.jwt_response_payload_handler',  # response中token的payload部分处理函数
+    'JWT_SECRET_KEY': 'zzxxyy123',
+}
+
+AUTHENTICATION_BACKENDS = (
+    'apis.users.utils.CustomBackend',
+)
+
+EMAIL_HOST = 'smtp.163.com'  # 发送邮件的服务器地址
+EMAIL_HOST_USER = '18328457630@163.com'  # 不含‘@126.com’的后缀
+EMAIL_HOST_PASSWORD = 'xiaolou123'  # 非邮箱登录密码
+EMAIL_PORT = 25
+DEFAULT_FROM_EMAIL = '18328457630@163.com'
